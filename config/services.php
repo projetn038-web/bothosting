@@ -46,4 +46,10 @@ return [
         'location_id' => env('PTERODACTYL_LOCATION_ID', 1),
     ],
 
+    'stripe' => [
+        'key' => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    ],
+
 ];

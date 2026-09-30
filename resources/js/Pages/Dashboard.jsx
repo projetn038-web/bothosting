@@ -9,6 +9,11 @@ export default function Dashboard({ bots }) {
         errors: claimErrors,
     } = useForm({});
     const {
+        post: buyCoins,
+        processing: buyingCoins,
+        errors: checkoutErrors,
+    } = useForm({});
+    const {
         data,
         setData,
         post,
@@ -24,6 +29,11 @@ export default function Dashboard({ bots }) {
     function claimDailyReward(event) {
         event.preventDefault();
         claimReward('/coins/claim');
+    }
+
+    function purchaseCoins(event) {
+        event.preventDefault();
+        buyCoins('/buy-coins');
     }
 
     function createBot(event) {
@@ -72,75 +82,120 @@ export default function Dashboard({ bots }) {
                         </p>
                     </div>
 
-                    <section
-                        aria-labelledby="coins-title"
-                        className="relative overflow-hidden rounded-3xl border border-cyan-200 bg-gradient-to-br from-white via-cyan-50 to-sky-100 p-6 shadow-sm dark:border-cyan-300/15 dark:from-slate-900 dark:via-slate-900 dark:to-cyan-950/50 sm:p-9"
-                    >
-                        <div
-                            aria-hidden="true"
-                            className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl dark:bg-cyan-300/10"
-                        />
-                        <div className="relative flex flex-col justify-between gap-8 sm:flex-row sm:items-center">
-                            <div>
-                                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                                    Votre solde
-                                </p>
-                                <div className="mt-3 flex items-center gap-4">
-                                    <span
-                                        aria-hidden="true"
-                                        className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-300 text-2xl font-bold text-amber-950 shadow-lg shadow-amber-950/10"
-                                    >
-                                        $
-                                    </span>
-                                    <h2
-                                        id="coins-title"
-                                        className="text-5xl font-semibold tracking-tight sm:text-6xl"
-                                    >
-                                        {Number(auth.user.coins ?? 0).toLocaleString(
-                                            'fr-FR',
-                                        )}
-                                        <span className="ml-3 text-xl font-medium text-slate-500 dark:text-slate-400">
-                                            pièces
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                        <section
+                            aria-labelledby="coins-title"
+                            className="relative overflow-hidden rounded-3xl border border-cyan-200 bg-gradient-to-br from-white via-cyan-50 to-sky-100 p-6 shadow-sm dark:border-cyan-300/15 dark:from-slate-900 dark:via-slate-900 dark:to-cyan-950/50 sm:p-9"
+                        >
+                            <div
+                                aria-hidden="true"
+                                className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl dark:bg-cyan-300/10"
+                            />
+                            <div className="relative flex flex-col justify-between gap-8 sm:flex-row sm:items-center">
+                                <div>
+                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                                        Votre solde
+                                    </p>
+                                    <div className="mt-3 flex items-center gap-4">
+                                        <span
+                                            aria-hidden="true"
+                                            className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-300 text-2xl font-bold text-amber-950 shadow-lg shadow-amber-950/10"
+                                        >
+                                            $
                                         </span>
-                                    </h2>
+                                        <h2
+                                            id="coins-title"
+                                            className="text-5xl font-semibold tracking-tight sm:text-6xl"
+                                        >
+                                            {Number(auth.user.coins ?? 0).toLocaleString(
+                                                'fr-FR',
+                                            )}
+                                            <span className="ml-3 text-xl font-medium text-slate-500 dark:text-slate-400">
+                                                pièces
+                                            </span>
+                                        </h2>
+                                    </div>
+                                    <p className="mt-4 max-w-lg text-sm leading-6 text-slate-600 dark:text-slate-400">
+                                        Revenez chaque jour pour récupérer votre récompense.
+                                    </p>
                                 </div>
-                                <p className="mt-4 max-w-lg text-sm leading-6 text-slate-600 dark:text-slate-400">
-                                    Revenez chaque jour pour récupérer votre récompense.
+
+                                <form
+                                    onSubmit={claimDailyReward}
+                                    className="flex shrink-0 flex-col gap-3 sm:items-end"
+                                >
+                                    <button
+                                        type="submit"
+                                        disabled={claimingReward}
+                                        className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-5 py-3.5 text-sm font-semibold text-white shadow-lg transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-cyan-300 dark:text-slate-950 dark:hover:bg-cyan-200 dark:focus:ring-offset-slate-900"
+                                    >
+                                        {claimingReward
+                                            ? 'Réclamation…'
+                                            : 'Réclamer ma récompense'}
+                                    </button>
+                                    {claimErrors.claim && (
+                                        <p
+                                            className="max-w-xs text-sm text-rose-600 dark:text-rose-300"
+                                            role="alert"
+                                        >
+                                            {claimErrors.claim}
+                                        </p>
+                                    )}
+                                    {flash?.success && (
+                                        <p
+                                            className="max-w-xs text-sm text-emerald-700 dark:text-emerald-300"
+                                            role="status"
+                                        >
+                                            {flash.success}
+                                        </p>
+                                    )}
+                                </form>
+                            </div>
+                        </section>
+
+                        <section
+                            aria-labelledby="shop-title"
+                            className="flex flex-col justify-between gap-8 rounded-3xl border border-amber-200 bg-gradient-to-br from-white via-amber-50 to-orange-100 p-6 shadow-sm dark:border-amber-300/15 dark:from-slate-900 dark:via-slate-900 dark:to-amber-950/40 sm:p-9"
+                        >
+                            <div>
+                                <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                                    Boutique
+                                </p>
+                                <h2
+                                    id="shop-title"
+                                    className="mt-2 text-2xl font-semibold tracking-tight"
+                                >
+                                    Besoin de plus de pièces ?
+                                </h2>
+                                <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-400">
+                                    Achetez un lot de 1 000 pièces en toute sécurité
+                                    avec Stripe Checkout.
                                 </p>
                             </div>
-
                             <form
-                                onSubmit={claimDailyReward}
-                                className="flex shrink-0 flex-col gap-3 sm:items-end"
+                                onSubmit={purchaseCoins}
+                                className="flex flex-col items-start gap-3"
                             >
                                 <button
                                     type="submit"
-                                    disabled={claimingReward}
-                                    className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-5 py-3.5 text-sm font-semibold text-white shadow-lg transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-cyan-300 dark:text-slate-950 dark:hover:bg-cyan-200 dark:focus:ring-offset-slate-900"
+                                    disabled={buyingCoins}
+                                    className="inline-flex items-center justify-center rounded-xl bg-amber-500 px-5 py-3.5 text-sm font-semibold text-amber-950 shadow-lg transition hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-300 dark:hover:bg-amber-200 dark:focus:ring-offset-slate-900"
                                 >
-                                    {claimingReward
-                                        ? 'Réclamation…'
-                                        : 'Réclamer ma récompense'}
+                                    {buyingCoins
+                                        ? 'Redirection vers Stripe…'
+                                        : 'Acheter 1000 pièces (5.00€)'}
                                 </button>
-                                {claimErrors.claim && (
+                                {checkoutErrors.checkout && (
                                     <p
                                         className="max-w-xs text-sm text-rose-600 dark:text-rose-300"
                                         role="alert"
                                     >
-                                        {claimErrors.claim}
-                                    </p>
-                                )}
-                                {flash?.success && (
-                                    <p
-                                        className="max-w-xs text-sm text-emerald-700 dark:text-emerald-300"
-                                        role="status"
-                                    >
-                                        {flash.success}
+                                        {checkoutErrors.checkout}
                                     </p>
                                 )}
                             </form>
-                        </div>
-                    </section>
+                        </section>
+                    </div>
 
                     <section
                         aria-labelledby="deploy-title"

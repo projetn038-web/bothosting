@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BotServerController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CoinController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -24,6 +26,11 @@ Route::get('/dashboard', function () {
 Route::post('/coins/claim', [CoinController::class, 'claimDaily'])
     ->middleware(['auth', 'throttle:5,1'])
     ->name('coins.claim');
+Route::post('/buy-coins', [CheckoutController::class, 'buyCoins'])
+    ->middleware('auth')
+    ->name('coins.checkout');
+Route::post('/webhook/stripe', [WebhookController::class, 'handleStripe'])
+    ->name('webhook.stripe');
 
 Route::get('/admin/login', [AdminController::class, 'showLogin'])
     ->name('admin.login');
