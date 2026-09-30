@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    'pterodactyl' => [
+        'url' => env('PTERODACTYL_URL'),
+        'api_key' => env('PTERODACTYL_API_KEY'),
+        'eggs' => [
+            'nodejs' => env('PTERODACTYL_EGG_NODEJS'),
+            'python' => env('PTERODACTYL_EGG_PYTHON'),
+        ],
+        'user_id' => env('PTERODACTYL_USER_ID', 1),
+        'location_id' => env('PTERODACTYL_LOCATION_ID', 1),
+    ],
+
 ];

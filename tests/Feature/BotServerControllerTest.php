@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -24,6 +26,7 @@ class BotServerControllerTest extends TestCase
 
     public function test_valid_bot_is_created_with_server_calculated_cost_and_owner(): void
     {
+        $this->fakePterodactylCreate();
         $user = User::factory()->create();
         $anotherUser = User::factory()->create();
 
@@ -42,6 +45,7 @@ class BotServerControllerTest extends TestCase
             ->assertSessionHas('success', 'Votre bot a été créé.');
         $this->assertDatabaseHas('bot_servers', [
             'user_id' => $user->id,
+            'pterodactyl_server_id' => '9001',
             'name' => 'My Python bot',
             'language' => 'python',
             'ram_mb' => 1024,
@@ -52,6 +56,13 @@ class BotServerControllerTest extends TestCase
             'user_id' => $anotherUser->id,
             'name' => 'My Python bot',
         ]);
+        Http::assertSent(fn (Request $request) => $request->url() === 'https://panel.example.test/api/application/servers'
+            && $request->method() === 'POST'
+            && $request->hasHeader('Authorization', 'Bearer test-api-key')
+            && $request->data()['name'] === 'My Python bot'
+            && $request->data()['egg'] === 22
+            && $request->data()['limits']['memory'] === 1024
+            && $request->data()['deploy']['locations'] === [1]);
     }
 
     #[DataProvider('supportedMemoryTiers')]
@@ -59,6 +70,7 @@ class BotServerControllerTest extends TestCase
         int $ramMb,
         int $expectedHourlyCost,
     ): void {
+        $this->fakePterodactylCreate();
         $user = User::factory()->create();
 
         $this->actingAs($user)->post('/bots', [
@@ -72,6 +84,28 @@ class BotServerControllerTest extends TestCase
             'ram_mb' => $ramMb,
             'cost_per_hour' => $expectedHourlyCost,
         ]);
+    }
+
+    public function test_bot_is_not_saved_when_pterodactyl_rejects_creation(): void
+    {
+        $this->configurePterodactyl();
+        Http::preventStrayRequests();
+        Http::fake([
+            'panel.example.test/api/application/servers' => Http::response(['errors' => []], 503),
+        ]);
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->from('/dashboard')
+            ->post('/bots', [
+                'name' => 'Unavailable bot',
+                'language' => 'nodejs',
+                'ram_mb' => 512,
+            ]);
+
+        $response->assertRedirect('/dashboard')
+            ->assertSessionHasErrors('name');
+        $this->assertDatabaseCount('bot_servers', 0);
     }
 
     public static function supportedMemoryTiers(): array
@@ -121,6 +155,29 @@ class BotServerControllerTest extends TestCase
                 'ram_mb',
             ],
         ];
+    }
+
+    private function fakePterodactylCreate(): void
+    {
+        $this->configurePterodactyl();
+        Http::preventStrayRequests();
+        Http::fake([
+            'panel.example.test/api/application/servers' => Http::response([
+                'attributes' => ['id' => 9001],
+            ], 201),
+        ]);
+    }
+
+    private function configurePterodactyl(): void
+    {
+        config([
+            'services.pterodactyl.url' => 'https://panel.example.test',
+            'services.pterodactyl.api_key' => 'test-api-key',
+            'services.pterodactyl.eggs.nodejs' => 11,
+            'services.pterodactyl.eggs.python' => 22,
+            'services.pterodactyl.user_id' => 1,
+            'services.pterodactyl.location_id' => 1,
+        ]);
     }
 
     public function test_dashboard_lists_only_the_authenticated_users_bots_in_latest_order(): void

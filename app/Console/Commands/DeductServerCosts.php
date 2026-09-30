@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\BotServer;
 use App\Models\User;
+use App\Services\PterodactylApiException;
+use App\Services\PterodactylService;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -13,52 +15,64 @@ use Illuminate\Support\Facades\DB;
 #[Description('Deduct hourly costs for active bot servers.')]
 class DeductServerCosts extends Command
 {
-    public function handle(): int
+    public function handle(PterodactylService $pterodactylService): int
     {
         $charged = 0;
         $suspended = 0;
+        $failures = 0;
 
         BotServer::query()
             ->with('user')
             ->where('status', 'active')
-            ->chunkById(100, function ($servers) use (&$charged, &$suspended): void {
+            ->chunkById(100, function ($servers) use ($pterodactylService, &$charged, &$suspended, &$failures): void {
                 foreach ($servers as $server) {
-                    $result = DB::transaction(function () use ($server): ?bool {
-                        $lockedServer = BotServer::query()
-                            ->whereKey($server->getKey())
-                            ->lockForUpdate()
-                            ->first();
+                    try {
+                        $result = DB::transaction(function () use ($server, $pterodactylService): ?bool {
+                            $lockedServer = BotServer::query()
+                                ->whereKey($server->getKey())
+                                ->lockForUpdate()
+                                ->first();
 
-                        if ($lockedServer === null || $lockedServer->status !== 'active') {
-                            return null;
-                        }
+                            if ($lockedServer === null || $lockedServer->status !== 'active') {
+                                return null;
+                            }
 
-                        $userId = $server->user?->getKey();
+                            $userId = $server->user?->getKey();
 
-                        if ($userId === null) {
-                            return null;
-                        }
+                            if ($userId === null) {
+                                return null;
+                            }
 
-                        $user = User::query()
-                            ->whereKey($userId)
-                            ->lockForUpdate()
-                            ->first();
+                            $user = User::query()
+                                ->whereKey($userId)
+                                ->lockForUpdate()
+                                ->first();
 
-                        if ($user === null) {
-                            return null;
-                        }
+                            if ($user === null) {
+                                return null;
+                            }
 
-                        if ($user->coins >= $lockedServer->cost_per_hour) {
-                            $user->decrement('coins', $lockedServer->cost_per_hour);
+                            if ($user->coins >= $lockedServer->cost_per_hour) {
+                                $user->decrement('coins', $lockedServer->cost_per_hour);
 
-                            return true;
-                        }
+                                return true;
+                            }
 
-                        $lockedServer->status = 'suspended';
-                        $lockedServer->save();
+                            if ($lockedServer->pterodactyl_server_id !== null) {
+                                $pterodactylService->suspendServer($lockedServer->pterodactyl_server_id);
+                            }
 
-                        return false;
-                    });
+                            $lockedServer->status = 'suspended';
+                            $lockedServer->save();
+
+                            return false;
+                        });
+                    } catch (PterodactylApiException) {
+                        $failures++;
+                        $this->error("Could not suspend Pterodactyl server {$server->pterodactyl_server_id}; billing will retry next hour.");
+
+                        continue;
+                    }
 
                     if ($result === true) {
                         $charged++;
@@ -68,8 +82,8 @@ class DeductServerCosts extends Command
                 }
             });
 
-        $this->info("Billing complete: {$charged} server(s) charged, {$suspended} suspended.");
+        $this->info("Billing complete: {$charged} server(s) charged, {$suspended} suspended, {$failures} suspension failure(s).");
 
-        return self::SUCCESS;
+        return $failures === 0 ? self::SUCCESS : self::FAILURE;
     }
 }
