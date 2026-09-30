@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\BotServerController;
 use App\Http\Controllers\CoinController;
 use App\Http\Controllers\ProfileController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -14,7 +16,9 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+    return Inertia::render('Dashboard', [
+        'bots' => Auth::user()->botServers()->latest()->get(),
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::post('/coins/claim', [CoinController::class, 'claimDaily'])
@@ -31,6 +35,8 @@ Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])
     ->name('admin.dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::post('/bots', [BotServerController::class, 'store'])->name('bots.store');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

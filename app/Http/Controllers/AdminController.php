@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BotServer;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,6 +18,12 @@ class AdminController extends Controller
 
     public function login(Request $request): RedirectResponse
     {
+        if (array_diff($request->keys(), ['password']) !== []) {
+            return back()->withErrors([
+                'password' => 'Seul le champ mot de passe est accepté.',
+            ]);
+        }
+
         $validated = $request->validate([
             'password' => ['required', 'string'],
         ]);
@@ -38,6 +46,13 @@ class AdminController extends Controller
 
     public function dashboard(): Response
     {
-        return Inertia::render('Admin/Dashboard');
+        return Inertia::render('Admin/Dashboard', [
+            'stats' => [
+                'users' => User::count(),
+                'bots' => BotServer::count(),
+                'coins' => User::sum('coins'),
+            ],
+            'servers' => BotServer::with('user')->latest()->get(),
+        ]);
     }
 }

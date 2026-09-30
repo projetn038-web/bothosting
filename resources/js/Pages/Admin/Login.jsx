@@ -1,4 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
+import ThemeToggle from '@/Components/ThemeToggle';
 
 export default function AdminLogin() {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -16,21 +17,24 @@ export default function AdminLogin() {
     return (
         <>
             <Head title="Administration" />
-            <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6 py-12 text-slate-100">
-                <section className="w-full max-w-md rounded-3xl border border-white/10 bg-slate-900 p-8 shadow-2xl shadow-black/30 sm:p-10">
-                    <Link
-                        href="/"
-                        className="text-sm font-medium text-cyan-300 transition hover:text-cyan-200"
-                    >
-                        ← Retour à l’accueil
-                    </Link>
-                    <p className="mt-10 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300">
+            <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-12 text-slate-950 dark:bg-slate-950 dark:text-slate-100">
+                <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl shadow-slate-950/10 dark:border-white/10 dark:bg-slate-900 dark:shadow-black/30 sm:p-10">
+                    <div className="flex items-center justify-between gap-4">
+                        <Link
+                            href="/"
+                            className="text-sm font-medium text-cyan-700 transition hover:text-cyan-800 dark:text-cyan-300 dark:hover:text-cyan-200"
+                        >
+                            ← Retour à l’accueil
+                        </Link>
+                        <ThemeToggle />
+                    </div>
+                    <p className="mt-8 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-300">
                         Espace sécurisé
                     </p>
                     <h1 className="mt-3 text-3xl font-semibold tracking-tight">
                         Administration
                     </h1>
-                    <p className="mt-3 text-sm leading-6 text-slate-400">
+                    <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-400">
                         Saisissez le mot de passe administrateur pour continuer.
                     </p>
 
@@ -38,7 +42,7 @@ export default function AdminLogin() {
                         <div className="space-y-2">
                             <label
                                 htmlFor="password"
-                                className="text-sm font-medium text-slate-200"
+                                className="text-sm font-medium text-slate-700 dark:text-slate-200"
                             >
                                 Mot de passe
                             </label>
@@ -52,10 +56,10 @@ export default function AdminLogin() {
                                     setData('password', event.target.value)
                                 }
                                 required
-                                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+                                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-cyan-400"
                             />
                             {errors.password && (
-                                <p className="text-sm text-rose-300" role="alert">
+                                <p className="text-sm text-rose-600 dark:text-rose-300" role="alert">
                                     {errors.password}
                                 </p>
                             )}

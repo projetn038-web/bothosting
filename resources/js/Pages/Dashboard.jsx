@@ -1,16 +1,36 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import ThemeToggle from '@/Components/ThemeToggle';
 
-export default function Dashboard() {
+export default function Dashboard({ bots }) {
     const { auth, flash } = usePage().props;
-    const { post, processing, errors } = useForm({});
-    const [botName, setBotName] = useState('');
-    const [language, setLanguage] = useState('nodejs');
-    const [ram, setRam] = useState('512');
+    const {
+        post: claimReward,
+        processing: claimingReward,
+        errors: claimErrors,
+    } = useForm({});
+    const {
+        data,
+        setData,
+        post,
+        processing,
+        errors,
+        reset,
+    } = useForm({
+        name: '',
+        language: 'nodejs',
+        ram_mb: '512',
+    });
 
     function claimDailyReward(event) {
         event.preventDefault();
-        post('/coins/claim');
+        claimReward('/coins/claim');
+    }
+
+    function createBot(event) {
+        event.preventDefault();
+        post('/bots', {
+            onSuccess: () => reset(),
+        });
     }
 
     return (
@@ -23,6 +43,7 @@ export default function Dashboard() {
                             Bot<span className="text-cyan-500 dark:text-cyan-300">Hosting</span>
                         </Link>
                         <div className="flex items-center gap-4">
+                            <ThemeToggle />
                             <span className="hidden text-sm text-slate-500 sm:inline dark:text-slate-400">
                                 {auth.user.name}
                             </span>
@@ -94,19 +115,19 @@ export default function Dashboard() {
                             >
                                 <button
                                     type="submit"
-                                    disabled={processing}
+                                    disabled={claimingReward}
                                     className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-5 py-3.5 text-sm font-semibold text-white shadow-lg transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-cyan-300 dark:text-slate-950 dark:hover:bg-cyan-200 dark:focus:ring-offset-slate-900"
                                 >
-                                    {processing
+                                    {claimingReward
                                         ? 'Réclamation…'
                                         : 'Réclamer ma récompense'}
                                 </button>
-                                {errors.claim && (
+                                {claimErrors.claim && (
                                     <p
                                         className="max-w-xs text-sm text-rose-600 dark:text-rose-300"
                                         role="alert"
                                     >
-                                        {errors.claim}
+                                        {claimErrors.claim}
                                     </p>
                                 )}
                                 {flash?.success && (
@@ -140,14 +161,11 @@ export default function Dashboard() {
                                     Choisissez un nom et les ressources de départ.
                                 </p>
                             </div>
-                            <span className="w-fit rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500 dark:border-white/10 dark:text-slate-400">
-                                Bientôt disponible
-                            </span>
                         </div>
 
                         <form
                             className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3"
-                            onSubmit={(event) => event.preventDefault()}
+                            onSubmit={createBot}
                         >
                             <div className="space-y-2">
                                 <label
@@ -159,13 +177,20 @@ export default function Dashboard() {
                                 <input
                                     id="bot-name"
                                     type="text"
-                                    value={botName}
+                                    value={data.name}
                                     onChange={(event) =>
-                                        setBotName(event.target.value)
+                                        setData('name', event.target.value)
                                     }
+                                    maxLength={255}
+                                    required
                                     placeholder="Mon nouveau bot"
                                     className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-cyan-300"
                                 />
+                                {errors.name && (
+                                    <p className="text-sm text-rose-600 dark:text-rose-300" role="alert">
+                                        {errors.name}
+                                    </p>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <label
@@ -176,9 +201,9 @@ export default function Dashboard() {
                                 </label>
                                 <select
                                     id="bot-language"
-                                    value={language}
+                                    value={data.language}
                                     onChange={(event) =>
-                                        setLanguage(event.target.value)
+                                        setData('language', event.target.value)
                                     }
                                     className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:border-cyan-300"
                                 >
@@ -195,8 +220,10 @@ export default function Dashboard() {
                                 </label>
                                 <select
                                     id="bot-ram"
-                                    value={ram}
-                                    onChange={(event) => setRam(event.target.value)}
+                                    value={data.ram_mb}
+                                    onChange={(event) =>
+                                        setData('ram_mb', event.target.value)
+                                    }
                                     className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:border-cyan-300"
                                 >
                                     <option value="512">512 MB</option>
@@ -206,14 +233,105 @@ export default function Dashboard() {
                             </div>
                             <div className="md:col-span-3">
                                 <button
-                                    type="button"
-                                    disabled
-                                    className="rounded-xl bg-slate-200 px-5 py-3 text-sm font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                                    type="submit"
+                                    disabled={processing}
+                                    className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-cyan-300 dark:text-slate-950 dark:hover:bg-cyan-200 dark:focus:ring-offset-slate-900"
                                 >
-                                    Déploiement bientôt disponible
+                                    {processing ? 'Création…' : 'Créer le bot'}
                                 </button>
+                                {errors.language && (
+                                    <p className="text-sm text-rose-600 dark:text-rose-300" role="alert">
+                                        {errors.language}
+                                    </p>
+                                )}
+                                {errors.ram_mb && (
+                                    <p className="text-sm text-rose-600 dark:text-rose-300" role="alert">
+                                        {errors.ram_mb}
+                                    </p>
+                                )}
                             </div>
                         </form>
+                    </section>
+
+                    <section
+                        aria-labelledby="bots-title"
+                        className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/[0.08] dark:bg-slate-900/70 sm:p-9"
+                    >
+                        <div className="flex items-end justify-between gap-4">
+                            <div>
+                                <p className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">
+                                    Vos déploiements
+                                </p>
+                                <h2
+                                    id="bots-title"
+                                    className="mt-2 text-2xl font-semibold tracking-tight"
+                                >
+                                    Mes bots
+                                </h2>
+                            </div>
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-600 dark:bg-white/[0.06] dark:text-slate-300">
+                                {bots.length}
+                            </span>
+                        </div>
+
+                        {bots.length === 0 ? (
+                            <p className="mt-6 rounded-2xl border border-dashed border-slate-300 px-5 py-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                                Aucun bot pour le moment. Créez votre premier bot ci-dessus.
+                            </p>
+                        ) : (
+                            <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                                {bots.map((bot) => (
+                                    <article
+                                        key={bot.id}
+                                        className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800"
+                                    >
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="min-w-0">
+                                                <h3 className="truncate text-base font-semibold">
+                                                    {bot.name}
+                                                </h3>
+                                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                                    {bot.language === 'nodejs'
+                                                        ? 'Node.js'
+                                                        : 'Python'}
+                                                </p>
+                                            </div>
+                                            <span
+                                                className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                                    bot.status === 'active'
+                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300'
+                                                        : 'bg-rose-100 text-rose-700 dark:bg-rose-400/10 dark:text-rose-300'
+                                                }`}
+                                            >
+                                                {bot.status === 'active'
+                                                    ? 'Actif'
+                                                    : 'Suspendu'}
+                                            </span>
+                                        </div>
+                                        <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-slate-100 pt-4 text-sm dark:border-white/[0.06]">
+                                            <div>
+                                                <dt className="text-slate-500 dark:text-slate-400">
+                                                    RAM
+                                                </dt>
+                                                <dd className="mt-1 font-medium">
+                                                    {bot.ram_mb >= 1024
+                                                        ? `${bot.ram_mb / 1024} GB`
+                                                        : `${bot.ram_mb} MB`}
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt className="text-slate-500 dark:text-slate-400">
+                                                    Coût horaire
+                                                </dt>
+                                                <dd className="mt-1 font-medium">
+                                                    {bot.cost_per_hour} pièces/h
+                                                </dd>
+                                            </div>
+                                        </dl>
+                                    </article>
+                                ))}
+                            </div>
+                        )}
                     </section>
                 </div>
             </main>
