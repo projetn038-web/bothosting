@@ -5,6 +5,7 @@ use App\Http\Controllers\BotServerController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CoinController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TicketController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -48,6 +49,17 @@ Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])
 
 Route::middleware('auth')->group(function () {
     Route::post('/bots', [BotServerController::class, 'store'])->name('bots.store');
+
+    Route::get('/support/tickets', [TicketController::class, 'index'])
+        ->name('support.index');
+    Route::post('/support/tickets', [TicketController::class, 'store'])
+        ->name('support.store');
+    Route::get('/support/tickets/{ticket}', [TicketController::class, 'show'])
+        ->whereNumber('ticket')
+        ->name('support.show');
+    Route::post('/support/tickets/{ticket}/replies', [TicketController::class, 'reply'])
+        ->whereNumber('ticket')
+        ->name('support.reply');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

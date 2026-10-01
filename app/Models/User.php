@@ -36,4 +36,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(BotServer::class);
     }
+
+    public function tickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class);
+    }
 }
