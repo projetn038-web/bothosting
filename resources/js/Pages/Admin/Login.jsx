@@ -1,4 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
+import CookieBanner from '@/Components/CookieBanner';
 import ThemeToggle from '@/Components/ThemeToggle';
 
 export default function AdminLogin() {
@@ -75,6 +76,7 @@ export default function AdminLogin() {
                     </form>
                 </section>
             </main>
+            <CookieBanner />
         </>
     );
 }

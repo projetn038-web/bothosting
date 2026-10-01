@@ -1,4 +1,5 @@
 import ThemeToggle from '@/Components/ThemeToggle';
+import CookieBanner from '@/Components/CookieBanner';
 import { Head, Link } from '@inertiajs/react';
 
 function UsersIcon() {
@@ -340,6 +341,7 @@ export default function AdminDashboard({ stats, servers }) {
                     </section>
                 </div>
             </main>
+            <CookieBanner />
         </>
     );
 }

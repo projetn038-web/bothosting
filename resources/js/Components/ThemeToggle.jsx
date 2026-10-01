@@ -10,7 +10,7 @@ export default function ThemeToggle() {
             onClick={toggleTheme}
             aria-label={isDark ? 'Activer le mode clair' : 'Activer le mode sombre'}
             title={`Switch Theme — mode ${isDark ? 'sombre' : 'clair'}`}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-amber-600 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-800 dark:text-cyan-200 dark:hover:bg-slate-700 dark:focus:ring-offset-slate-900"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 bg-white text-black transition hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:border-zinc-800 dark:bg-black dark:text-white dark:hover:bg-zinc-900 dark:focus:ring-offset-black"
         >
             {isDark ? (
                 <svg

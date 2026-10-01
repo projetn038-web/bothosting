@@ -14,9 +14,23 @@ class CheckoutController extends Controller
 {
     public function buyCoins(Request $request): Response
     {
+        $validated = $request->validate([
+            'currency' => ['required', 'in:eur,xof'],
+        ]);
+        $currency = $validated['currency'];
+        $unitAmount = $currency === 'xof' ? 3500 : 500;
         $secret = (string) config('services.stripe.secret');
 
         if ($secret === '') {
+            if (app()->environment('local')) {
+                $request->user()->increment('coins', 1000);
+
+                return back()->with(
+                    'success',
+                    '[DEV MODE] 1000 pièces ajoutées (Clés Stripe manquantes).',
+                );
+            }
+
             return back()->withErrors([
                 'checkout' => 'Le paiement est temporairement indisponible.',
             ]);
@@ -31,8 +45,8 @@ class CheckoutController extends Controller
                 'line_items' => [[
                     'quantity' => 1,
                     'price_data' => [
-                        'currency' => 'eur',
-                        'unit_amount' => 500,
+                        'currency' => $currency,
+                        'unit_amount' => $unitAmount,
                         'product_data' => [
                             'name' => '1000 pièces',
                         ],

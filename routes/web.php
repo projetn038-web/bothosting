@@ -17,6 +17,11 @@ Route::get('/', function () {
     ]);
 });
 
+Route::get('/cgu', fn () => Inertia::render('Legal/CGU'))
+    ->name('legal.cgu');
+Route::get('/rgpd', fn () => Inertia::render('Legal/RGPD'))
+    ->name('legal.rgpd');
+
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard', [
         'bots' => Auth::user()->botServers()->latest()->get(),

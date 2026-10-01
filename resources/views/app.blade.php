@@ -3,6 +3,12 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="Hébergement de bots Node.js et Python 24/7. Réclamez vos pièces gratuites et lancez votre bot instantanément.">
+        <meta property="og:title" content="BotHosting — Hébergement de Bots 24/7">
+        <meta property="og:description" content="Hébergement de bots Node.js et Python 24/7. Réclamez vos pièces gratuites et lancez votre bot instantanément.">
+        <meta property="og:image" content="{{ url('/social-preview.svg') }}">
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="{{ url()->current() }}">
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Stripe\ApiRequestor;
 use Stripe\HttpClient\ClientInterface;
@@ -61,7 +62,7 @@ class CheckoutControllerTest extends TestCase
 
         $response = $this->actingAs($user)
             ->withHeader('X-Inertia', 'true')
-            ->post('/buy-coins');
+            ->post('/buy-coins', ['currency' => 'eur']);
 
         $response->assertStatus(409)
             ->assertHeader('X-Inertia-Location', 'https://checkout.stripe.test/session/123');
@@ -77,14 +78,90 @@ class CheckoutControllerTest extends TestCase
 
     public function test_checkout_reports_unavailable_when_secret_is_not_configured(): void
     {
+        config(['app.env' => 'production']);
         config(['services.stripe.secret' => '']);
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)
             ->from('/dashboard')
-            ->post('/buy-coins');
+            ->post('/buy-coins', ['currency' => 'eur']);
 
         $response->assertRedirect('/dashboard')
             ->assertSessionHasErrors('checkout');
+    }
+
+    public function test_checkout_creates_a_zero_decimal_xof_session(): void
+    {
+        config(['services.stripe.secret' => 'sk_test_checkout']);
+        $stripeClient = new class implements ClientInterface
+        {
+            public array $request = [];
+
+            public function request(
+                $method,
+                $absUrl,
+                $headers,
+                $params,
+                $hasFile,
+                $apiMode = 'v1',
+                $maxNetworkRetries = null,
+            ) {
+                $this->request = compact('method', 'absUrl', 'params');
+
+                return [
+                    json_encode([
+                        'id' => 'cs_test_xof',
+                        'object' => 'checkout.session',
+                        'url' => 'https://checkout.stripe.test/session/xof',
+                    ], JSON_THROW_ON_ERROR),
+                    200,
+                    ['Request-Id' => 'req_test_xof'],
+                ];
+            }
+        };
+        ApiRequestor::setHttpClient($stripeClient);
+        $user = User::factory()->create(['coins' => 20]);
+
+        $response = $this->actingAs($user)
+            ->withHeader('X-Inertia', 'true')
+            ->post('/buy-coins', ['currency' => 'xof']);
+
+        $response->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', 'https://checkout.stripe.test/session/xof');
+        $this->assertSame('xof', $stripeClient->request['params']['line_items'][0]['price_data']['currency']);
+        $this->assertSame(3500, $stripeClient->request['params']['line_items'][0]['price_data']['unit_amount']);
+        $this->assertSame(20, $user->fresh()->coins);
+    }
+
+    public function test_checkout_rejects_unsupported_currencies(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->from('/dashboard')
+            ->post('/buy-coins', ['currency' => 'usd']);
+
+        $response->assertRedirect('/dashboard')
+            ->assertSessionHasErrors('currency');
+        $this->assertSame(0, $user->fresh()->coins);
+    }
+
+    public function test_checkout_simulates_a_purchase_when_stripe_is_not_configured_locally(): void
+    {
+        $this->app->detectEnvironment(fn () => 'local');
+        config(['services.stripe.secret' => '']);
+        $user = User::factory()->create(['coins' => 20]);
+
+        $response = $this->actingAs($user)
+            ->withoutMiddleware(PreventRequestForgery::class)
+            ->from('/dashboard')
+            ->post('/buy-coins', ['currency' => 'eur']);
+
+        $response->assertRedirect('/dashboard')
+            ->assertSessionHas(
+                'success',
+                '[DEV MODE] 1000 pièces ajoutées (Clés Stripe manquantes).',
+            );
+        $this->assertSame(1020, $user->fresh()->coins);
     }
 }
