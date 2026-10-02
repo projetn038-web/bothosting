@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminLogController;
 use App\Http\Controllers\AdminTicketController;
 use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\BotServerController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CoinController;
@@ -26,6 +27,15 @@ Route::get('/cgu', fn () => Inertia::render('Legal/CGU'))
     ->name('legal.cgu');
 Route::get('/rgpd', fn () => Inertia::render('Legal/RGPD'))
     ->name('legal.rgpd');
+
+Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])
+    ->whereIn('provider', ['google', 'github'])
+    ->middleware('guest')
+    ->name('social.redirect');
+Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])
+    ->whereIn('provider', ['google', 'github'])
+    ->middleware('guest')
+    ->name('social.callback');
 
 Route::get('/dashboard', function () {
     $user = Auth::user();

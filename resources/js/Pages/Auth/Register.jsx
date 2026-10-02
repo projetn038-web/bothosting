@@ -1,6 +1,7 @@
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
+import SocialAuthButtons from '@/Components/SocialAuthButtons';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
@@ -116,6 +117,7 @@ export default function Register({ referralCode }) {
                     </PrimaryButton>
                 </div>
             </form>
+            <SocialAuthButtons />
         </GuestLayout>
     );
 }
