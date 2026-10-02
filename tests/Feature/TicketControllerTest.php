@@ -100,6 +100,24 @@ class TicketControllerTest extends TestCase
             ->where('ticket.replies.0.user.name', $user->name));
     }
 
+    public function test_ticket_conversation_includes_support_replies_without_a_customer_author(): void
+    {
+        $user = User::factory()->create();
+        $ticket = $user->tickets()->create(['subject' => 'Need help']);
+        $ticket->replies()->create([
+            'user_id' => null,
+            'message' => 'The support team replied.',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('support.show', $ticket));
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('Support/Show')
+            ->where('ticket.replies.0.user_id', null)
+            ->where('ticket.replies.0.message', 'The support team replied.'));
+    }
+
     public function test_user_cannot_read_or_reply_to_another_users_ticket(): void
     {
         $owner = User::factory()->create();

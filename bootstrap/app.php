@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AdminSessionAuth;
+use App\Http\Middleware\CheckBanned;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -17,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'admin.session' => AdminSessionAuth::class,
+            'check.banned' => CheckBanned::class,
         ]);
 
         $middleware->web(append: [

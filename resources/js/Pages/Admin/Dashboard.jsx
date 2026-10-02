@@ -149,6 +149,24 @@ export default function AdminDashboard({ stats, servers }) {
                         </div>
 
                         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+                            <Link
+                                href={route('admin.tickets.index')}
+                                className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 sm:px-4"
+                            >
+                                Tickets
+                            </Link>
+                            <Link
+                                href={route('admin.users.index')}
+                                className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 sm:px-4"
+                            >
+                                Utilisateurs
+                            </Link>
+                            <Link
+                                href={route('admin.logs.index')}
+                                className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 sm:px-4"
+                            >
+                                Logs Système
+                            </Link>
                             <ThemeToggle />
                             <Link
                                 href="/"

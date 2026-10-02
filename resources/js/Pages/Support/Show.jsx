@@ -84,7 +84,9 @@ export default function Show({ ticket }) {
                         className="flex flex-col gap-5 py-8"
                     >
                         {ticket.replies.map((reply) => {
-                            const isCustomer = reply.user_id === auth.user.id;
+                            const isSupport = reply.user_id === null;
+                            const isCustomer =
+                                !isSupport && reply.user_id === auth.user.id;
 
                             return (
                                 <article
@@ -103,12 +105,19 @@ export default function Show({ ticket }) {
                                         }`}
                                     >
                                         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
-                                            <p className="text-xs font-semibold">
-                                                {isCustomer
-                                                    ? 'Vous'
-                                                    : reply.user?.name ??
-                                                      'Support'}
-                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-xs font-semibold">
+                                                    {isCustomer
+                                                        ? 'Vous'
+                                                        : reply.user?.name ??
+                                                          'Support Team'}
+                                                </p>
+                                                {isSupport && (
+                                                    <span className="rounded border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
+                                                        Support Team
+                                                    </span>
+                                                )}
+                                            </div>
                                             <time
                                                 dateTime={reply.created_at}
                                                 className={`text-xs ${

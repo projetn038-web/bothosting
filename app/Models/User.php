@@ -28,6 +28,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'last_daily_claim' => 'datetime',
+            'last_login_at' => 'datetime',
+            'is_banned' => 'boolean',
             'password' => 'hashed',
         ];
     }
