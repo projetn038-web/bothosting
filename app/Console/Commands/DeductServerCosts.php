@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\BotServer;
 use App\Models\User;
+use App\Notifications\ServerSuspendedNotification;
 use App\Services\PterodactylApiException;
 use App\Services\PterodactylService;
 use Illuminate\Console\Attributes\Description;
@@ -78,6 +79,12 @@ class DeductServerCosts extends Command
                         $charged++;
                     } elseif ($result === false) {
                         $suspended++;
+
+                        if ($server->user !== null) {
+                            $server->user->notify(
+                                new ServerSuspendedNotification($server->name),
+                            );
+                        }
                     }
                 }
             });

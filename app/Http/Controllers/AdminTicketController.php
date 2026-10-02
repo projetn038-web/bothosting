@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ticket;
+use App\Notifications\TicketReplyNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -41,10 +42,14 @@ class AdminTicketController extends Controller
             'message' => ['required', 'string', 'max:10000'],
         ]);
 
-        $ticket->replies()->create([
+        $reply = $ticket->replies()->create([
             'user_id' => null,
             'message' => $validated['message'],
         ]);
+
+        if ($ticket->user !== null && $reply->user_id !== $ticket->user_id) {
+            $ticket->user->notify(new TicketReplyNotification($ticket));
+        }
 
         return back()->with('success', 'Votre réponse a été envoyée.');
     }

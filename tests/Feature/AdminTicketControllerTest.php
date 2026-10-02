@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Notifications\TicketReplyNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class AdminTicketControllerTest extends TestCase
@@ -72,6 +74,8 @@ class AdminTicketControllerTest extends TestCase
 
     public function test_admin_reply_is_saved_as_a_support_message_without_a_customer_author(): void
     {
+        Notification::fake();
+
         $user = User::factory()->create();
         $ticket = $user->tickets()->create(['subject' => 'Need help']);
 
@@ -88,6 +92,11 @@ class AdminTicketControllerTest extends TestCase
             'user_id' => null,
             'message' => 'We are looking into this.',
         ]);
+        Notification::assertSentTo(
+            $user,
+            TicketReplyNotification::class,
+            fn (TicketReplyNotification $notification): bool => $notification->ticket->is($ticket),
+        );
     }
 
     public function test_admin_reply_requires_a_message(): void

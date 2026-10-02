@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Notifications\ServerSuspendedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class DeductServerCostsTest extends TestCase
@@ -14,6 +16,8 @@ class DeductServerCostsTest extends TestCase
 
     public function test_hourly_billing_debits_affordable_bots_and_suspends_bots_without_funds(): void
     {
+        Notification::fake();
+
         $user = User::factory()->create(['coins' => 12]);
         $firstBot = $user->botServers()->create([
             'name' => 'First bot',
@@ -45,6 +49,12 @@ class DeductServerCostsTest extends TestCase
         $this->assertSame('suspended', $secondBot->fresh()->status);
         $this->assertSame(0, $inactiveUser->fresh()->coins);
         $this->assertSame('suspended', $suspendedBot->fresh()->status);
+        Notification::assertSentTo(
+            $user,
+            ServerSuspendedNotification::class,
+            fn (ServerSuspendedNotification $notification): bool => $notification->serverName === 'Second bot',
+        );
+        Notification::assertNotSentTo($inactiveUser, ServerSuspendedNotification::class);
     }
 
     public function test_hourly_billing_suspends_an_unpaid_server_in_pterodactyl(): void
