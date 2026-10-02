@@ -44,7 +44,7 @@ class DeductServerCostsTest extends TestCase
 
         $this->artisan('billing:hourly')->assertSuccessful();
 
-        $this->assertSame(2, $user->fresh()->coins);
+        $this->assertSame(4, $user->fresh()->coins);
         $this->assertSame('active', $firstBot->fresh()->status);
         $this->assertSame('suspended', $secondBot->fresh()->status);
         $this->assertSame(0, $inactiveUser->fresh()->coins);

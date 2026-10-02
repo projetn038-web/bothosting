@@ -49,7 +49,7 @@ class BotServerControllerTest extends TestCase
             'name' => 'My Python bot',
             'language' => 'python',
             'ram_mb' => 1024,
-            'cost_per_hour' => 10,
+            'cost_per_hour' => 8,
             'status' => 'active',
         ]);
         $this->assertDatabaseMissing('bot_servers', [
@@ -111,9 +111,9 @@ class BotServerControllerTest extends TestCase
     public static function supportedMemoryTiers(): array
     {
         return [
-            '512 MB' => [512, 5],
-            '1 GB' => [1024, 10],
-            '2 GB' => [2048, 20],
+            '512 MB' => [512, 4],
+            '1 GB' => [1024, 8],
+            '2 GB' => [2048, 15],
         ];
     }
 
@@ -214,6 +214,8 @@ class BotServerControllerTest extends TestCase
             ->component('Dashboard')
             ->has('bots', 2)
             ->where('bots.0.id', $latestBot->id)
-            ->where('bots.1.id', $olderBot->id));
+            ->where('bots.0.cost_per_hour', 15)
+            ->where('bots.1.id', $olderBot->id)
+            ->where('bots.1.cost_per_hour', 4));
     }
 }

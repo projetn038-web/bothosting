@@ -19,7 +19,28 @@ class EmailVerificationTest extends TestCase
 
         $response = $this->actingAs($user)->get('/verify-email');
 
-        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page->component('Auth/VerifyEmail'));
+    }
+
+    public function test_unverified_users_cannot_access_the_dashboard_or_purchase_routes(): void
+    {
+        $user = User::factory()->unverified()->create();
+
+        $this->actingAs($user)
+            ->get('/dashboard')
+            ->assertRedirect(route('verification.notice'));
+
+        $this->post('/bots', [
+            'name' => 'Unverified bot',
+            'language' => 'nodejs',
+            'ram_mb' => 512,
+        ])->assertRedirect(route('verification.notice'));
+
+        $this->post('/buy-coins', [
+            'coins_amount' => 700,
+            'currency' => 'eur',
+            'payment_method' => 'stripe',
+        ])->assertRedirect(route('verification.notice'));
     }
 
     public function test_email_can_be_verified(): void

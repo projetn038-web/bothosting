@@ -2,9 +2,23 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import CookieBanner from '@/Components/CookieBanner';
 import PlatformIcons from '@/Components/PlatformIcons';
 import ThemeToggle from '@/Components/ThemeToggle';
+import { useState } from 'react';
 
-export default function Dashboard({ bots }) {
+function formatCoinPrice(amount, currency) {
+    if (currency === 'xof') {
+        return `${Number(amount).toLocaleString('fr-FR')} FCFA`;
+    }
+
+    return `${(Number(amount) / 100).toLocaleString('fr-FR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })} €`;
+}
+
+export default function Dashboard({ bots, referralUrl, referralsCount, coinPackages }) {
     const { auth, flash } = usePage().props;
+    const [referralCopied, setReferralCopied] = useState(false);
+    const [referralCopyError, setReferralCopyError] = useState(false);
     const {
         post: claimReward,
         processing: claimingReward,
@@ -18,6 +32,8 @@ export default function Dashboard({ bots }) {
         errors: checkoutErrors,
     } = useForm({
         currency: 'eur',
+        coins_amount: 700,
+        payment_method: 'stripe',
     });
     const {
         data,
@@ -47,6 +63,22 @@ export default function Dashboard({ bots }) {
         post('/bots', {
             onSuccess: () => reset(),
         });
+    }
+
+    const packages = Object.entries(coinPackages).map(([coins, packageDetails]) => ({
+        coins: Number(coins),
+        ...packageDetails,
+    }));
+
+    async function copyReferralLink() {
+        try {
+            await navigator.clipboard.writeText(referralUrl);
+            setReferralCopied(true);
+            setReferralCopyError(false);
+        } catch {
+            setReferralCopied(false);
+            setReferralCopyError(true);
+        }
     }
 
     return (
@@ -157,7 +189,7 @@ export default function Dashboard({ bots }) {
 
                         <section
                             aria-labelledby="shop-title"
-                            className="flex flex-col justify-between gap-8 rounded-md border border-zinc-200 bg-zinc-50 p-6 dark:border-zinc-800 dark:bg-zinc-950 sm:p-9"
+                            className="flex flex-col gap-8 rounded-md border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-black sm:p-9 lg:col-span-2"
                         >
                             <div>
                                 <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
@@ -167,20 +199,20 @@ export default function Dashboard({ bots }) {
                                     id="shop-title"
                                     className="mt-2 text-2xl font-semibold tracking-tight"
                                 >
-                                    Besoin de plus de pièces ?
+                                    Choisissez votre forfait
                                 </h2>
                                 <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-                                    Achetez un lot de 1 000 pièces en toute sécurité
-                                    avec Stripe Checkout.
+                                    Rechargez votre solde avec le moyen de paiement
+                                    qui vous convient.
                                 </p>
                             </div>
                             <form
                                 onSubmit={purchaseCoins}
-                                className="flex flex-col items-start gap-3"
+                                className="flex flex-col gap-8"
                             >
                                 <label
                                     htmlFor="checkout-currency"
-                                    className="flex flex-col gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                                    className="flex w-fit flex-col gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300"
                                 >
                                     Devise
                                     <select
@@ -198,16 +230,160 @@ export default function Dashboard({ bots }) {
                                         <option value="xof">Franc CFA (XOF)</option>
                                     </select>
                                 </label>
+                                {checkoutErrors.currency && (
+                                    <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+                                        {checkoutErrors.currency}
+                                    </p>
+                                )}
+                                <fieldset className="space-y-3">
+                                    <legend className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                                        Forfait de pièces
+                                    </legend>
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                        {packages.map((coinPackage) => (
+                                            <label
+                                                key={coinPackage.coins}
+                                                className={`flex cursor-pointer flex-col gap-5 rounded-md border p-5 transition ${
+                                                    checkoutData.coins_amount === coinPackage.coins
+                                                        ? 'border-black bg-white dark:border-white dark:bg-black'
+                                                        : 'border-zinc-300 bg-white dark:border-zinc-800 dark:bg-black'
+                                                }`}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="coins_amount"
+                                                    value={coinPackage.coins}
+                                                    checked={
+                                                        checkoutData.coins_amount ===
+                                                        coinPackage.coins
+                                                    }
+                                                    onChange={() =>
+                                                        setCheckoutData(
+                                                            'coins_amount',
+                                                            coinPackage.coins,
+                                                        )
+                                                    }
+                                                    className="peer sr-only"
+                                                />
+                                                <span className="flex items-start justify-between gap-3 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-zinc-500">
+                                                    <span>
+                                                        <span className="block text-lg font-semibold">
+                                                            {coinPackage.name}
+                                                        </span>
+                                                        <span className="mt-1 block text-sm text-zinc-600 dark:text-zinc-400">
+                                                            {coinPackage.subtitle}
+                                                        </span>
+                                                    </span>
+                                                    <span
+                                                        aria-hidden="true"
+                                                        className={`mt-1 h-4 w-4 shrink-0 rounded-full border ${
+                                                            checkoutData.coins_amount ===
+                                                            coinPackage.coins
+                                                                ? 'border-[5px] border-black dark:border-white'
+                                                                : 'border-zinc-400 dark:border-zinc-600'
+                                                        }`}
+                                                    />
+                                                </span>
+                                                <span className="flex items-end justify-between gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+                                                    <span className="text-2xl font-semibold tracking-tight">
+                                                        {formatCoinPrice(
+                                                            coinPackage.prices[
+                                                                checkoutData.currency
+                                                            ],
+                                                            checkoutData.currency,
+                                                        )}
+                                                    </span>
+                                                    <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                                                        {coinPackage.coins.toLocaleString(
+                                                            'fr-FR',
+                                                        )}{' '}
+                                                        pièces
+                                                    </span>
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    {checkoutErrors.coins_amount && (
+                                        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+                                            {checkoutErrors.coins_amount}
+                                        </p>
+                                    )}
+                                </fieldset>
+                                <fieldset className="space-y-3">
+                                    <legend className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                                        Moyen de paiement
+                                    </legend>
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        {[
+                                            {
+                                                value: 'stripe',
+                                                label: 'Carte Bancaire (Stripe)',
+                                                description: 'Paiement sécurisé par carte',
+                                            },
+                                            {
+                                                value: 'mobile_money',
+                                                label: 'Mobile Money (Orange / Wave)',
+                                                description: 'Disponible prochainement',
+                                            },
+                                        ].map((method) => (
+                                            <label
+                                                key={method.value}
+                                                className={`flex cursor-pointer items-start gap-3 rounded-md border p-4 transition ${
+                                                    checkoutData.payment_method ===
+                                                    method.value
+                                                        ? 'border-black bg-white dark:border-white dark:bg-black'
+                                                        : 'border-zinc-300 dark:border-zinc-800'
+                                                }`}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="payment_method"
+                                                    value={method.value}
+                                                    checked={
+                                                        checkoutData.payment_method ===
+                                                        method.value
+                                                    }
+                                                    onChange={(event) =>
+                                                        setCheckoutData(
+                                                            'payment_method',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    className="mt-1 accent-black dark:accent-white"
+                                                />
+                                                <span className="flex flex-col gap-1">
+                                                    <span className="text-sm font-medium">
+                                                        {method.label}
+                                                    </span>
+                                                    <span className="text-xs text-zinc-600 dark:text-zinc-400">
+                                                        {method.description}
+                                                    </span>
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    {checkoutErrors.payment_method && (
+                                        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+                                            {checkoutErrors.payment_method}
+                                        </p>
+                                    )}
+                                </fieldset>
                                 <button
                                     type="submit"
                                     disabled={buyingCoins}
-                                    className="inline-flex items-center justify-center rounded-md bg-black px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-black dark:hover:bg-zinc-200 dark:focus:ring-offset-black"
+                                    className="inline-flex w-fit items-center justify-center rounded-md bg-black px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-black dark:hover:bg-zinc-200 dark:focus:ring-offset-black"
                                 >
                                     {buyingCoins
-                                        ? 'Redirection vers Stripe…'
-                                        : checkoutData.currency === 'xof'
-                                          ? 'Acheter 1000 pièces (3500 FCFA)'
-                                          : 'Acheter 1000 pièces (5.00€)'}
+                                        ? 'Préparation du paiement…'
+                                        : checkoutData.payment_method ===
+                                            'mobile_money'
+                                          ? 'Continuer avec Mobile Money'
+                                          : `Payer ${formatCoinPrice(
+                                                coinPackages[
+                                                    checkoutData.coins_amount
+                                                ].prices[checkoutData.currency],
+                                                checkoutData.currency,
+                                            )}`}
                                 </button>
                                 {checkoutErrors.checkout && (
                                     <p
@@ -220,6 +396,68 @@ export default function Dashboard({ bots }) {
                             </form>
                         </section>
                     </div>
+
+                    <section
+                        aria-labelledby="referral-title"
+                        className="mt-8 rounded-md border border-zinc-300 bg-white p-6 dark:border-zinc-800 dark:bg-black sm:p-9"
+                    >
+                        <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
+                            <div className="max-w-2xl">
+                                <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
+                                    Programme de Parrainage
+                                </p>
+                                <h2
+                                    id="referral-title"
+                                    className="mt-2 text-2xl font-semibold tracking-tight"
+                                >
+                                    Faites grandir la communauté
+                                </h2>
+                                <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+                                    Invitez vos amis et gagnez 500 pièces pour
+                                    chaque inscription. Vos amis reçoivent 200
+                                    pièces de bienvenue.
+                                </p>
+                                <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
+                                    {referralsCount} personne
+                                    {referralsCount === 1 ? '' : 's'} parrainée
+                                    {referralsCount === 1 ? '' : 's'}
+                                </p>
+                            </div>
+                            <div className="flex w-full flex-col gap-3 sm:max-w-xl">
+                                <label
+                                    htmlFor="referral-link"
+                                    className="text-sm font-medium"
+                                >
+                                    Votre lien de parrainage
+                                </label>
+                                <div className="flex flex-col gap-2 sm:flex-row">
+                                    <input
+                                        id="referral-link"
+                                        type="text"
+                                        readOnly
+                                        value={referralUrl}
+                                        className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-zinc-50 px-3 py-3 text-sm text-black dark:border-zinc-800 dark:bg-zinc-950 dark:text-white"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={copyReferralLink}
+                                        className="rounded-md bg-black px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:bg-white dark:text-black dark:hover:bg-zinc-200 dark:focus:ring-offset-black"
+                                    >
+                                        {referralCopied ? 'Copié !' : 'Copier'}
+                                    </button>
+                                </div>
+                                {referralCopyError && (
+                                    <p
+                                        className="text-sm text-red-600 dark:text-red-400"
+                                        role="alert"
+                                    >
+                                        Impossible de copier le lien. Vérifiez
+                                        les autorisations du navigateur.
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </section>
 
                     <section
                         aria-labelledby="deploy-title"
@@ -305,16 +543,26 @@ export default function Dashboard({ bots }) {
                                 </label>
                                 <select
                                     id="bot-ram"
+                                    aria-describedby="bot-ram-warning"
                                     value={data.ram_mb}
                                     onChange={(event) =>
                                         setData('ram_mb', event.target.value)
                                     }
                                     className="w-full rounded-md border border-zinc-300 bg-white px-4 py-3 text-sm text-black outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-800 dark:bg-black dark:text-white dark:focus:border-zinc-500"
                                 >
-                                    <option value="512">512 MB</option>
-                                    <option value="1024">1 GB</option>
-                                    <option value="2048">2 GB</option>
+                                    <option value="512">512 MB (4 pièces/h)</option>
+                                    <option value="1024">1 GB (8 pièces/h)</option>
+                                    <option value="2048">2 GB (15 pièces/h)</option>
                                 </select>
+                                <p
+                                    id="bot-ram-warning"
+                                    className="text-sm leading-6 text-amber-700 dark:text-amber-300"
+                                >
+                                    ⚠️ Attention : Si le code de votre bot consomme
+                                    plus de RAM que la limite sélectionnée, le serveur
+                                    plantera automatiquement. Choisissez une offre
+                                    adaptée à vos dépendances.
+                                </p>
                             </div>
                             <div className="md:col-span-3">
                                 <button

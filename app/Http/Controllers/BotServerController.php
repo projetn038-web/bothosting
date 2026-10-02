@@ -18,12 +18,6 @@ class BotServerController extends Controller
             'ram_mb' => ['required', 'integer', 'in:512,1024,2048'],
         ]);
 
-        $hourlyCosts = [
-            512 => 5,
-            1024 => 10,
-            2048 => 20,
-        ];
-
         /** @var User $user */
         $user = $request->user();
 
@@ -43,7 +37,7 @@ class BotServerController extends Controller
             ...$validated,
             'pterodactyl_server_id' => $pterodactylServerId,
             'ram_mb' => (int) $validated['ram_mb'],
-            'cost_per_hour' => $hourlyCosts[(int) $validated['ram_mb']],
+            'cost_per_hour' => config('bot_servers.hourly_costs.'.(int) $validated['ram_mb']),
             'status' => 'active',
         ]);
 

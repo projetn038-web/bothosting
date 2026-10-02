@@ -10,6 +10,7 @@ use App\Http\Controllers\CoinController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\WebhookController;
+use App\Models\BotServer;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -27,16 +28,29 @@ Route::get('/rgpd', fn () => Inertia::render('Legal/RGPD'))
     ->name('legal.rgpd');
 
 Route::get('/dashboard', function () {
+    $user = Auth::user();
+    $bots = $user->botServers()->latest()->get()->map(function (BotServer $bot): BotServer {
+        $bot->setAttribute(
+            'cost_per_hour',
+            config('bot_servers.hourly_costs.'.$bot->ram_mb, $bot->cost_per_hour),
+        );
+
+        return $bot;
+    });
+
     return Inertia::render('Dashboard', [
-        'bots' => Auth::user()->botServers()->latest()->get(),
+        'bots' => $bots,
+        'referralUrl' => route('register', ['ref' => $user->referral_code]),
+        'referralsCount' => $user->referrals()->count(),
+        'coinPackages' => config('coin_packages.packages'),
     ]);
 })->middleware(['auth', 'check.banned', 'verified'])->name('dashboard');
 
 Route::post('/coins/claim', [CoinController::class, 'claimDaily'])
-    ->middleware(['auth', 'check.banned', 'throttle:5,1'])
+    ->middleware(['auth', 'check.banned', 'verified', 'throttle:5,1'])
     ->name('coins.claim');
 Route::post('/buy-coins', [CheckoutController::class, 'buyCoins'])
-    ->middleware(['auth', 'check.banned'])
+    ->middleware(['auth', 'check.banned', 'verified'])
     ->name('coins.checkout');
 Route::post('/webhook/stripe', [WebhookController::class, 'handleStripe'])
     ->name('webhook.stripe');
@@ -78,7 +92,9 @@ Route::get('/admin/logs', [AdminLogController::class, 'index'])
     ->name('admin.logs.index');
 
 Route::middleware(['auth', 'check.banned'])->group(function () {
-    Route::post('/bots', [BotServerController::class, 'store'])->name('bots.store');
+    Route::post('/bots', [BotServerController::class, 'store'])
+        ->middleware('verified')
+        ->name('bots.store');
 
     Route::get('/support/tickets', [TicketController::class, 'index'])
         ->name('support.index');

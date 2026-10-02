@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Stripe\Checkout\Session;
 use Stripe\Exception\ApiErrorException;
@@ -14,26 +15,38 @@ class CheckoutController extends Controller
 {
     public function buyCoins(Request $request): Response
     {
+        $coinPackages = config('coin_packages.packages');
         $validated = $request->validate([
+            'coins_amount' => ['required', 'integer', Rule::in(array_map('intval', array_keys($coinPackages)))],
             'currency' => ['required', 'in:eur,xof'],
+            'payment_method' => ['required', 'in:stripe,mobile_money'],
         ]);
+
+        $coinsAmount = (int) $validated['coins_amount'];
         $currency = $validated['currency'];
-        $unitAmount = $currency === 'xof' ? 3500 : 500;
+        $unitAmount = $coinPackages[$coinsAmount]['prices'][$currency];
         $secret = (string) config('services.stripe.secret');
 
-        if ($secret === '') {
-            if (app()->environment('local')) {
-                $request->user()->increment('coins', 1000);
+        if ($secret === '' && app()->environment('local')) {
+            $request->user()->increment('coins', $coinsAmount);
 
-                return back()->with(
-                    'success',
-                    '[DEV MODE] 1000 pièces ajoutées (Clés Stripe manquantes).',
-                );
-            }
+            return back()->with(
+                'success',
+                "[DEV MODE] {$coinsAmount} pièces ajoutées (Clés Stripe manquantes).",
+            );
+        }
 
-            return back()->withErrors([
-                'checkout' => 'Le paiement est temporairement indisponible.',
-            ]);
+        switch ($validated['payment_method']) {
+            case 'mobile_money':
+                return back()->with('success', 'Paiement Mobile Money en cours d’intégration.');
+            case 'stripe':
+                if ($secret === '') {
+                    return back()->withErrors([
+                        'checkout' => 'Le paiement est temporairement indisponible.',
+                    ]);
+                }
+
+                break;
         }
 
         try {
@@ -42,13 +55,16 @@ class CheckoutController extends Controller
             $checkoutSession = Session::create([
                 'mode' => 'payment',
                 'client_reference_id' => (string) $request->user()->getKey(),
+                'metadata' => [
+                    'coins_amount' => (string) $coinsAmount,
+                ],
                 'line_items' => [[
                     'quantity' => 1,
                     'price_data' => [
                         'currency' => $currency,
                         'unit_amount' => $unitAmount,
                         'product_data' => [
-                            'name' => '1000 pièces',
+                            'name' => "{$coinPackages[$coinsAmount]['name']} - {$coinsAmount} pièces",
                         ],
                     ],
                 ]],

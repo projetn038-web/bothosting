@@ -21,12 +21,12 @@ class WebhookControllerTest extends TestCase
         $response = $this->postStripeWebhook($payload);
 
         $response->assertNoContent();
-        $this->assertSame(1075, $user->fresh()->coins);
+        $this->assertSame(775, $user->fresh()->coins);
         $this->assertDatabaseHas('stripe_checkout_payments', [
             'user_id' => $user->id,
             'stripe_checkout_session_id' => 'cs_test_paid',
             'stripe_event_id' => 'evt_test_paid',
-            'coins' => 1000,
+            'coins' => 700,
         ]);
     }
 
@@ -39,7 +39,7 @@ class WebhookControllerTest extends TestCase
         $this->postStripeWebhook($payload)->assertNoContent();
         $this->postStripeWebhook($payload)->assertNoContent();
 
-        $this->assertSame(1075, $user->fresh()->coins);
+        $this->assertSame(775, $user->fresh()->coins);
         $this->assertDatabaseCount('stripe_checkout_payments', 1);
     }
 
@@ -86,14 +86,54 @@ class WebhookControllerTest extends TestCase
 
         $this->postStripeWebhook($payload)->assertNoContent();
 
-        $this->assertSame(1075, $user->fresh()->coins);
+        $this->assertSame(775, $user->fresh()->coins);
         $this->assertDatabaseCount('stripe_checkout_payments', 1);
+    }
+
+    public function test_paid_xof_elite_checkout_credits_the_package_coins(): void
+    {
+        config(['services.stripe.webhook_secret' => self::WEBHOOK_SECRET]);
+        $user = User::factory()->create(['coins' => 75]);
+        $payload = $this->checkoutEventPayload(
+            $user->id,
+            coinsAmount: 5000,
+            currency: 'xof',
+            amountTotal: 6500,
+        );
+
+        $this->postStripeWebhook($payload)->assertNoContent();
+
+        $this->assertSame(5075, $user->fresh()->coins);
+        $this->assertDatabaseHas('stripe_checkout_payments', [
+            'user_id' => $user->id,
+            'coins' => 5000,
+        ]);
+    }
+
+    public function test_webhook_does_not_credit_a_package_with_a_mismatched_price(): void
+    {
+        config(['services.stripe.webhook_secret' => self::WEBHOOK_SECRET]);
+        $user = User::factory()->create(['coins' => 75]);
+        $payload = $this->checkoutEventPayload(
+            $user->id,
+            coinsAmount: 5000,
+            currency: 'eur',
+            amountTotal: 200,
+        );
+
+        $this->postStripeWebhook($payload)->assertNoContent();
+
+        $this->assertSame(75, $user->fresh()->coins);
+        $this->assertDatabaseCount('stripe_checkout_payments', 0);
     }
 
     private function checkoutEventPayload(
         int $userId,
         string $paymentStatus = 'paid',
         string $eventType = 'checkout.session.completed',
+        int $coinsAmount = 700,
+        string $currency = 'eur',
+        int $amountTotal = 200,
     ): string {
         return json_encode([
             'id' => 'evt_test_paid',
@@ -106,8 +146,11 @@ class WebhookControllerTest extends TestCase
                     'client_reference_id' => (string) $userId,
                     'mode' => 'payment',
                     'payment_status' => $paymentStatus,
-                    'currency' => 'eur',
-                    'amount_total' => 500,
+                    'currency' => $currency,
+                    'amount_total' => $amountTotal,
+                    'metadata' => [
+                        'coins_amount' => (string) $coinsAmount,
+                    ],
                 ],
             ],
         ], JSON_THROW_ON_ERROR);

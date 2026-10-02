@@ -53,8 +53,16 @@ class DeductServerCosts extends Command
                                 return null;
                             }
 
-                            if ($user->coins >= $lockedServer->cost_per_hour) {
-                                $user->decrement('coins', $lockedServer->cost_per_hour);
+                            $hourlyCost = config('bot_servers.hourly_costs.'.$lockedServer->ram_mb);
+
+                            if (! is_int($hourlyCost)) {
+                                throw new \UnexpectedValueException(
+                                    "Unsupported RAM size {$lockedServer->ram_mb} MB for bot {$lockedServer->getKey()}.",
+                                );
+                            }
+
+                            if ($user->coins >= $hourlyCost) {
+                                $user->decrement('coins', $hourlyCost);
 
                                 return true;
                             }

@@ -15,10 +15,6 @@ use UnexpectedValueException;
 
 class WebhookController extends Controller
 {
-    private const COINS_PER_PURCHASE = 1000;
-
-    private const PURCHASE_AMOUNT_CENTS = 500;
-
     public function handleStripe(Request $request): Response
     {
         $webhookSecret = (string) config('services.stripe.webhook_secret');
@@ -53,14 +49,24 @@ class WebhookController extends Controller
 
         $checkoutSession = $event->data->object;
         $userId = filter_var($checkoutSession->client_reference_id ?? null, FILTER_VALIDATE_INT);
+        $coinsAmount = filter_var(
+            $checkoutSession->metadata->coins_amount ?? null,
+            FILTER_VALIDATE_INT,
+        );
+        $currency = strtolower((string) ($checkoutSession->currency ?? ''));
+        $coinPackages = config('coin_packages.packages');
+        $expectedAmount = is_int($coinsAmount) && isset($coinPackages[$coinsAmount])
+            ? ($coinPackages[$coinsAmount]['prices'][$currency] ?? null)
+            : null;
 
         if (
             $userId === false
             || $userId < 1
             || ($checkoutSession->mode ?? null) !== 'payment'
             || ($checkoutSession->payment_status ?? null) !== 'paid'
-            || strtolower((string) ($checkoutSession->currency ?? '')) !== 'eur'
-            || (int) ($checkoutSession->amount_total ?? 0) !== self::PURCHASE_AMOUNT_CENTS
+            || ! is_int($coinsAmount)
+            || ! is_int($expectedAmount)
+            || (int) ($checkoutSession->amount_total ?? 0) !== $expectedAmount
             || ! is_string($checkoutSession->id ?? null)
             || ! is_string($event->id ?? null)
         ) {
@@ -70,8 +76,9 @@ class WebhookController extends Controller
                 'client_reference_id' => $checkoutSession->client_reference_id ?? null,
                 'mode' => $checkoutSession->mode ?? null,
                 'payment_status' => $checkoutSession->payment_status ?? null,
-                'currency' => $checkoutSession->currency ?? null,
+                'currency' => $currency,
                 'amount_total' => $checkoutSession->amount_total ?? null,
+                'coins_amount' => $coinsAmount,
             ]);
 
             return response()->noContent();
@@ -88,12 +95,12 @@ class WebhookController extends Controller
             return response()->noContent();
         }
 
-        DB::transaction(function () use ($user, $checkoutSession, $event): void {
+        DB::transaction(function () use ($user, $checkoutSession, $event, $coinsAmount): void {
             $inserted = DB::table('stripe_checkout_payments')->insertOrIgnore([
                 'user_id' => $user->getKey(),
                 'stripe_checkout_session_id' => $checkoutSession->id,
                 'stripe_event_id' => $event->id,
-                'coins' => self::COINS_PER_PURCHASE,
+                'coins' => $coinsAmount,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -101,7 +108,7 @@ class WebhookController extends Controller
             if ($inserted === 1) {
                 User::query()
                     ->whereKey($user->getKey())
-                    ->increment('coins', self::COINS_PER_PURCHASE);
+                    ->increment('coins', $coinsAmount);
             }
         });
 
